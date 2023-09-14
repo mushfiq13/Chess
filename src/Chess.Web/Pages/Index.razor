@@ -1,0 +1,148 @@
+﻿@page "/"
+@using Chess.Domain.Utils
+@using Chess.Domain.Entities.Base
+@using Chess.Web.Models 
+@using Chess.Application.Services
+@using Microsoft.AspNetCore.Components
+@inject Chess.Web.Models.AppState State
+@implements IDisposable
+
+<PageTitle>Chess :: Home</PageTitle>
+
+<main>
+	<div class="container p-0" style="height: 100vh; max-width: 900px">
+		@if (GameRunner?.Winner is not null) {
+			<div class="alert alert-danger text-center position-absolute" style="width: 100% !important; top: 30%; z-index: 1" role="alert">
+				<h4 class="alert-heading">Game Over!</h4>
+				<div class="alert alert-success" role="alert">
+					<p>
+						<strong>
+							@GameRunner?.Winner.ToString() player
+						</strong> is the winner of the game.
+					</p>
+					<p class="mb-0"><i>Refresh the page to play again!</i></p>
+				</div>
+			</div>
+		}
+		else {
+			<div id="player-section" class="row">
+				<div class="col">
+					<section id="main-board">
+						<table class="table table-bordered">
+							<tbody>
+								@for (var i = 0; i < Constants.RANKS; ++i) {
+									State.ToggleBgColor();
+									var rank = i;
+									<tr>
+										@for (var j = 0; j < Constants.FILES; ++j) {
+											var file = j;
+											var classNames = $"board-cell {State.BgColor}";
+											if (GameRunner?.Board[i, j] is not null) {
+												classNames = $"{classNames} has-piece";
+											}
+											if (Location?.FromRank == rank && Location?.FromFile == file) {
+												classNames = $"{classNames} {State.HightlightSourcePiece()}";
+											}
+											<td id="@(i * Constants.RANKS + j)"
+													class="@classNames"
+													data-rank="@i"
+													data-file="@j"
+													data-name="@GameRunner?.Board[i, j]?.Name"
+													@onclick="async () =>
+													{
+														await OnTdElementClickAsync(rank, file);
+													}">
+												@if (GameRunner?.Board[i, j]?.Name is not null) {
+													<img class="m-auto mt-0 mb-0"
+															 src="img/@(GameRunner.Board[i, j]?.Name).png" />
+												}
+											</td>
+											State.ToggleBgColor();
+										}
+									</tr>
+								}
+							</tbody>
+						</table>
+					</section>
+				</div>
+
+				<div class="col">
+					<section id="dashboard" class="position-relative" style="top: 28%">
+						@{ int waitForOpponentOpacity = 0; }
+						@if (GameRunner?.TheColorInTurn == Color.White) {
+							waitForOpponentOpacity = 1;
+						}
+						<div class="who-is-palying" style="opacity: @waitForOpponentOpacity">
+							<span>🟢</span><em>Waiting for opponent...</em>
+						</div>
+						<div id="analysis-board" style="height: 144px; overflow-y: auto">
+							<table>
+								<tbody>
+									@foreach (var row in State.PieceMovingHistory.History) {
+										var black = row.Value.Item1;
+										var white = row.Value.Item2;
+										<tr style="height: 36px;">
+											<td class="counter">@row.Key</td>
+											<td class="turned-piece">
+												@if (black is not null) {
+													<img src="img/@(black?.Name).png" /><span>@black?.ToRank</span><span>x</span><span>@black?.ToFile</span>
+												}
+											</td>
+											@if (white is not null) {
+												<td class="turned-piece">
+													<img src="img/@(white.Name).png" /><span>@white.ToRank</span><span>x</span><span>@white.ToFile</span>
+												</td>
+											}
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+						@{ int yourTurnOpacity = 0; }
+						@if (GameRunner?.TheColorInTurn == Color.Black) {
+							yourTurnOpacity = 1;
+						}
+					<div class="who-is-palying" style="opacity: @yourTurnOpacity">						
+						<span>🟢</span><em>Your Turn</em>
+					</div>
+					</section>
+				</div>
+			</div>
+		}
+	</div>
+</main>
+
+@code {
+	private IGameRunnerService GameRunner { get; set; }
+	private MovingPieceCurrentLocation Location { get; set; }
+
+	protected override void OnInitialized()
+	{
+		GameRunner = State.GameService;
+		Location = State.Location;
+
+		GameRunner.Start();
+	}
+
+	private async Task OnTdElementClickAsync(int rank, int file)
+	{
+		try {
+			if (Location.FromRank is -1 || Location.FromFile is -1) {
+				Location.SetSourceLocation(GameRunner.Board, rank, file);
+
+				return;
+			}
+
+			Location.SetDestinition(rank, file);
+			await State.MovePiece();
+		}
+		catch (Exception ex) {
+			System.Diagnostics.Debug.WriteLine(ex.Message);
+		}
+	}
+
+	public void Dispose()
+	{
+		State.OnChange -= StateHasChanged;
+	}
+}
