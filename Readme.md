@@ -4,12 +4,9 @@ Project's Goal: Thinking, Implementation, Showcase
 
 Features:
 
-1. A 2D Board including moving history of pieces.
-2. Black piece must move at first.
-3. Winner can be detected.
+1. 2-player chess game
+2. Winner detection
 
-Limitation:
+TODO:
 
-1. Opponent has no automatic moving algorithm.
-2. Did not implement all possible movements of a selected piece to highlight
-   tiles where the player can easily choose to move.
+1. Automate the opponent's action
