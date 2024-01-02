@@ -1,4 +1,4 @@
-﻿using Chess.Application.Services;
+﻿using Chess.Web.Application;
 using Chess.Web.Models.PieceHistory;
 
 namespace Chess.Web.Models;
@@ -9,28 +9,29 @@ public class AppState
 
 	public MovingPieceCurrentLocation Location { get; private set; } = new();
 	public PieceMovingHistory PieceMovingHistory { get; set; } = new();
-	public IGameRunnerService GameService { get; }
+	public IGameHandler GameHandler { get; }
 
 	public event Action OnChange = () => { };
 
-	public AppState(IGameRunnerService gameRunnerService)
+	public AppState(IGameHandler gameRunnerService)
 	{
-		GameService = gameRunnerService;
+		GameHandler = gameRunnerService;
 	}
 
 	public async Task MovePiece()
 	{
-		var curInfo = await GameService.MovePieceAsync(
+		var curInfo = await GameHandler.HandleAsync(
 			Location.FromRank,
 			Location.FromFile,
 			Location.ToRank,
 			Location.ToFile);
 
-		if (curInfo?.IsPieceMoved is true) {
+		if (curInfo?.IsPieceMoved == true) {
 			PieceMovingHistory.AddNew(
 				curInfo?.PieceRef!,
 				Location.ToRank,
 				Location.ToFile);
+
 			OnChange();
 		}
 

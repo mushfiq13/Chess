@@ -1,5 +1,4 @@
-﻿using Chess.Domain.Entities.Base;
-using Chess.Domain.Services;
+﻿using Chess.Web.Domain.Board;
 
 namespace Chess.Web.Models;
 
@@ -18,7 +17,7 @@ public class MovingPieceCurrentLocation
 	/// <param name="file"></param>
 	public void SetSourceLocation(IBoard board, int rank, int file)
 	{
-		if (PieceBoundaryChecker.Inbounds(rank, file)
+		if (board.TileExists(rank, file)
 			&& board[rank, file] is null)
 			return;
 

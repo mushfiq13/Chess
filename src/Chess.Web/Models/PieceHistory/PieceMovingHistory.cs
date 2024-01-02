@@ -1,4 +1,5 @@
-﻿using Chess.Domain.Entities.Base;
+﻿using Chess.Web.Domain;
+using Chess.Web.Domain.Piece.Base;
 
 namespace Chess.Web.Models.PieceHistory;
 
@@ -26,11 +27,11 @@ public class PieceMovingHistory
 			ToFile = ToFile
 		};
 
-		if (piece?.Color == Domain.Utils.Color.Black) {
+		if (piece?.Color == Color.Black) {
 			++TotalRowsUntilNow;
 			History.Add(TotalRowsUntilNow, (newHistory, null!));
 		}
-		else if (piece?.Color == Domain.Utils.Color.White) {
+		else if (piece?.Color == Color.White) {
 			History[TotalRowsUntilNow] = (History[TotalRowsUntilNow].Item1, newHistory!);
 		}
 	}
