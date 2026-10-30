@@ -1,0 +1,72 @@
+@implements IDisposable
+@inject AppState State
+@inject IGameHandler GameRunner
+@inject MoveFeed Feed
+@inject IJSRuntime JSRuntime
+
+<section class="status" aria-live="polite">
+	@if (GameRunner.Winner is not null) {
+		<div class="status__banner status__banner--win">
+			<span class="status__badge">@WinnerLabel</span>
+			<p class="status__text">
+				<strong>@GameRunner.Winner.Value</strong> wins the game.
+			</p>
+			<button type="button" class="btn btn--primary" @onclick="StartNewGameAsync">
+				New game
+			</button>
+		</div>
+	}
+	else {
+		<div class="status__row">
+			<div class="status__turn">
+				<span class="status__dot @TurnClass" aria-hidden="true"></span>
+				<span class="status__label">@TurnLabel</span>
+			</div>
+			<span class="status__meta">@MoveCountLabel</span>
+		</div>
+	}
+</section>
+
+@code {
+	private string TurnLabel => GameRunner.TheColorInTurn switch {
+		Color.White => "White to move",
+		Color.Black => "Black to move",
+		_ => "Starting game"
+	};
+
+	private string TurnClass => GameRunner.TheColorInTurn switch {
+		Color.White => "status__dot--white",
+		Color.Black => "status__dot--black",
+		_ => "status__dot--idle"
+	};
+
+	private string WinnerLabel
+		=> GameRunner.Winner is null ? string.Empty : "Game over";
+
+	private string MoveCountLabel
+	{
+		get {
+			var count = Feed.Moves.Count;
+
+			return count == 1 ? "1 move" : $"{count} moves";
+		}
+	}
+
+	protected override void OnInitialized() => Feed.OnMove += OnMove;
+
+	private void OnMove() => InvokeAsync(StateHasChanged);
+
+	public void Dispose() => Feed.OnMove -= OnMove;
+
+	/// <summary>
+	/// Restarts the game.
+	/// </summary>
+	/// <remarks>
+	/// The domain's Init() method clears the winner and the piece histories but
+	/// never restores the board, so an in-app reset is not possible without
+	/// changing domain code. Reloading the page rebuilds the WebAssembly
+	/// runtime and therefore the board.
+	/// </remarks>
+	private async Task StartNewGameAsync()
+		=> await JSRuntime.InvokeVoidAsync("location.reload");
+}

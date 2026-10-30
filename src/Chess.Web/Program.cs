@@ -5,6 +5,7 @@ using Chess.Web.Domain.Board;
 using Chess.Web.Domain.Piece;
 using Chess.Web.Domain.Piece.Base;
 using Chess.Web.Models;
+using Chess.Web.Models.Ui;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -18,6 +19,10 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<IGameHandler, GameHandler>();
+
+// Frontend-only: a feed of the moves observed by the presentation layer,
+// used to render algebraic notation and the captured-pieces tray.
+builder.Services.AddScoped<MoveFeed>();
 builder.Services.AddScoped<IBoard, Board>(_ =>
 {
 	var tiles = new IPiece[8, 8];

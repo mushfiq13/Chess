@@ -3,8 +3,10 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Chess.Web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="A responsive chess game built with Blazor WebAssembly." />
+  <meta name="theme-color" content="#12100e" />
+  <title>Chess</title>
   <base href="/" />
   <script>
     // https://blog.elmah.io/how-to-fix-blazor-wasm-base-path-problems/
@@ -17,28 +19,15 @@
     } else if (path[path.length - 1].length != 0) {
       window.location.replace(window.location.origin + window.location.pathname + '/' + window.location.search);
     }
-
-		window.setup = (dotNetHelper) => {
-			window.dotNetHelper = dotNetHelper;
-    }
-
-		window.onPieceMovement = async (srcTile, destTile) => {						
-      await window.dotNetHelper.invokeMethodAsync('OnPieceMovement',
-        srcTile?.dataset?.rank,
-        srcTile?.dataset?.file,
-        destTile?.dataset?.rank,
-        destTile?.dataset?.file);
-		};
   </script>
-  <link rel="stylesheet" type="text/css" href="css/app.css?version=1.1">
-  <link href="css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="css/app.css" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link href="Chess.Web.styles.css" rel="stylesheet" />
 </head>
 
 <body>
     <div id="app"></div>
-  
+
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

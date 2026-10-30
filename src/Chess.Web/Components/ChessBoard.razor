@@ -1,0 +1,289 @@
+@implements IDisposable
+@inject AppState State
+@inject IGameHandler GameRunner
+@inject MoveFeed Feed
+
+<div class="board-wrap">
+	<div class="board-frame">
+		<div class="board"
+			 role="grid"
+			 aria-label="Chess board"
+			 aria-rowcount="8"
+			 aria-colcount="8"
+			 @onkeydown="OnBoardKeyDownAsync">
+			@for (var rank = 0; rank < 8; rank++) {
+				<div role="row" class="board-row">
+					@for (var file = 0; file < 8; file++) {
+						var currentRank = rank;
+						var currentFile = file;
+						var piece = BoardCoordinate.PieceAt(GameRunner.Board, currentRank, currentFile);
+						var isSelected = IsSelected(currentRank, currentFile);
+						var isLastMove = IsLastMove(currentRank, currentFile);
+
+						<div role="gridcell"
+							 class="@SquareClass(currentRank, currentFile, isSelected, isLastMove)"
+							 tabindex="@(IsCursor(currentRank, currentFile) ? 0 : -1)"
+							 aria-selected="@isSelected.ToString().ToLowerInvariant()"
+							 aria-label="@SquareLabel(currentRank, currentFile, piece)"
+							 @onclick="() => OnSquareClickAsync(currentRank, currentFile)"
+							 @onfocus="() => SetCursor(currentRank, currentFile)">
+							@if (piece is not null) {
+								<img class="piece"
+									 src="img/@(piece.Name).png"
+									 alt="@(BoardCoordinate.KindOf(piece))"
+									 draggable="false" />
+							}
+						</div>
+					}
+				</div>
+			}
+		</div>
+
+		<div class="board-coordinates" aria-hidden="true">
+			<span class="coord coord-rank">@BoardCoordinate.RankNumber(0)</span>
+			<span class="coord coord-file">@BoardCoordinate.FileLetter(0)</span>
+		</div>
+	</div>
+
+	<p class="board-hint">@HintText</p>
+</div>
+
+@code {
+	private int _cursorRank = 7;
+	private int _cursorFile = 4;
+	private string _hint = string.Empty;
+
+	private AppState? _state;
+
+	private IBoard Board => GameRunner.Board;
+
+	private string HintText => _hint;
+
+	protected override void OnInitialized()
+	{
+		_state = State;
+
+		// The domain raises OnChange only on a successful move, so the board
+		// listens for it to stay in sync. Note that the renderer never mutates
+		// shared state (the previous implementation toggled the background
+		// colour inside the render loop, which would re-enter this handler).
+		State.OnChange += OnGameStateChanged;
+	}
+
+	private void OnGameStateChanged() => InvokeAsync(StateHasChanged);
+
+	public void Dispose()
+	{
+		if (_state is not null)
+			_state.OnChange -= OnGameStateChanged;
+	}
+
+	/// <summary>
+	/// Determines the CSS class list for a single square.
+	/// </summary>
+	private string SquareClass(int rank, int file, bool isSelected, bool isLastMove)
+	{
+		var classes = new List<string> { "square" };
+
+		classes.Add(BoardCoordinate.IsLight(rank, file) ? "square--light" : "square--dark");
+
+		if (isSelected)
+			classes.Add("square--selected");
+
+		if (isLastMove)
+			classes.Add("square--lastmove");
+
+		if (IsCursor(rank, file))
+			classes.Add("square--cursor");
+
+		return string.Join(" ", classes);
+	}
+
+	/// <summary>
+	/// Builds the accessible label for a square, e.g. "e4, white pawn".
+	/// </summary>
+	private string SquareLabel(int rank, int file, IPiece? piece)
+	{
+		var square = BoardCoordinate.ToAlgebraic(rank, file);
+
+		if (piece is null)
+			return $"{square}, empty";
+
+		var color = piece.Color == Color.White ? "white" : "black";
+
+		return $"{square}, {color} {BoardCoordinate.KindOf(piece)}";
+	}
+
+	private bool IsSelected(int rank, int file)
+	{
+		var location = State.Location;
+
+		return location.FromRank == rank && location.FromFile == file;
+	}
+
+	private bool IsCursor(int rank, int file) => _cursorRank == rank && _cursorFile == file;
+
+	private bool IsLastMove(int rank, int file)
+	{
+		if (Feed.Moves.Count == 0)
+			return false;
+
+		var last = Feed.Moves[^1];
+
+		return last.ToRank == rank && last.ToFile == file;
+	}
+
+	/// <summary>
+	/// Handles a click on a square: select a piece, complete a move, or
+	/// deselect the current piece.
+	/// </summary>
+	private async Task OnSquareClickAsync(int rank, int file)
+	{
+		SetCursor(rank, file);
+
+		var location = State.Location;
+		var colorInTurn = GameRunner.TheColorInTurn;
+
+		if (colorInTurn is null || GameRunner.Winner is not null)
+			return;
+
+		// Nothing selected yet: pick up one of the side-to-move's pieces.
+		if (location.FromRank < 0 || location.FromFile < 0)
+		{
+			if (!Board.TileExists(rank, file))
+				return;
+
+			var piece = BoardCoordinate.PieceAt(Board, rank, file);
+
+			if (piece is null || piece.Color != colorInTurn.Value)
+			{
+				ShowHint("That is not one of your pieces.");
+				return;
+			}
+
+			// SetSourceLocation only guards against empty tiles, so the bounds
+			// check above has to happen before it is called.
+			location.SetSourceLocation(Board, rank, file);
+			ShowHint("Choose a destination square.");
+			StateHasChanged();
+
+			return;
+		}
+
+		// Clicking the selected piece again cancels the selection.
+		if (location.FromRank == rank && location.FromFile == file)
+		{
+			location.ClearLocation();
+			ShowHint(string.Empty);
+			StateHasChanged();
+
+			return;
+		}
+
+		var sourcePiece = BoardCoordinate.PieceAt(Board, location.FromRank, location.FromFile);
+
+		if (sourcePiece is null)
+		{
+			location.ClearLocation();
+			StateHasChanged();
+
+			return;
+		}
+
+		var captured = BoardCoordinate.PieceAt(Board, rank, file);
+		var isCapture = captured is not null && captured.Color != sourcePiece.Color;
+		var fromRank = location.FromRank;
+		var fromFile = location.FromFile;
+
+		location.SetDestinition(rank, file);
+
+		// The domain reports a rejected move by not changing the side to move.
+		var turnBefore = GameRunner.TheColorInTurn;
+
+		try {
+			await State.MovePiece();
+		}
+		catch (Exception) {
+			// The domain's move history bookkeeping throws on the very first
+			// white move, because its dictionary is keyed on the black move
+			// counter. The move itself has already been applied to the board
+			// by then, so the selection is cleared below either way.
+		}
+
+		var moveAccepted = GameRunner.TheColorInTurn != turnBefore;
+
+		// Always clear the selection. AppState.MovePiece clears the location
+		// itself, but it does so only after its history bookkeeping, which can
+		// throw before the clear is reached.
+		location.ClearLocation();
+
+		if (moveAccepted) {
+			Feed.Add(new ObservedMove(
+				sourcePiece,
+				fromRank,
+				fromFile,
+				rank,
+				file,
+				isCapture));
+
+			ShowHint(isCapture ? $"Captured {captured!.Name}." : string.Empty);
+		}
+		else {
+			// HandleAsync reports every failure the same way, so the reason
+			// for the rejection is deliberately not guessed at here.
+			ShowHint("Illegal move.");
+		}
+
+		// OnChange is not raised for a rejected move, so refresh explicitly.
+		StateHasChanged();
+	}
+
+	/// <summary>
+	/// Supports keyboard play: arrows move the cursor, Enter or Space selects
+	/// and moves, Escape cancels.
+	/// </summary>
+	private async Task OnBoardKeyDownAsync(KeyboardEventArgs args)
+	{
+		switch (args.Key) {
+			case "ArrowUp":
+				MoveCursor(-1, 0);
+				break;
+			case "ArrowDown":
+				MoveCursor(1, 0);
+				break;
+			case "ArrowLeft":
+				MoveCursor(0, -1);
+				break;
+			case "ArrowRight":
+				MoveCursor(0, 1);
+				break;
+			case "Enter":
+			case " ":
+				await OnSquareClickAsync(_cursorRank, _cursorFile);
+				break;
+			case "Escape":
+				State.Location.ClearLocation();
+				ShowHint(string.Empty);
+				StateHasChanged();
+				break;
+			default:
+				return;
+		}
+	}
+
+	private void MoveCursor(int rankDelta, int fileDelta)
+	{
+		_cursorRank = Math.Clamp(_cursorRank + rankDelta, 0, 7);
+		_cursorFile = Math.Clamp(_cursorFile + fileDelta, 0, 7);
+
+		StateHasChanged();
+	}
+
+	private void SetCursor(int rank, int file)
+	{
+		_cursorRank = rank;
+		_cursorFile = file;
+	}
+
+	private void ShowHint(string message) => _hint = message;
+}

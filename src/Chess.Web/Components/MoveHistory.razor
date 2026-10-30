@@ -1,0 +1,132 @@
+@implements IDisposable
+@using Chess.Web.Models.PieceHistory
+@inject MoveFeed Feed
+
+<section class="history">
+	<div class="history__header">
+		<h2 class="panel__title">Moves</h2>
+		<span class="history__count">@Entries.Count</span>
+	</div>
+
+	@if (Entries.Count == 0) {
+		<p class="history__empty">No moves yet. Select a piece to begin.</p>
+	}
+	else {
+		<div class="history__board">
+			<table class="history__table">
+				<tbody>
+					@foreach (var entry in Entries) {
+						<tr>
+							<td class="history__counter">@entry.MoveNumber</td>
+							<td class="history__piece-cell">
+								@if (entry.White is not null) {
+									<span class="history__piece" tabindex="0">
+										<img src="img/@(entry.White.Name).png" alt="@(entry.White.Name)" />
+										<span>@entry.White.ToRank</span><span>x</span><span>@entry.White.ToFile</span>
+									</span>
+								}
+								else {
+									<span class="history__piece history__piece--empty"></span>
+								}
+							</td>
+							<td class="history__piece-cell">
+								@if (entry.Black is not null) {
+									<span class="history__piece" tabindex="0">
+										<img src="img/@(entry.Black.Name).png" alt="@(entry.Black.Name)" />
+										<span>@entry.Black.ToRank</span><span>x</span><span>@entry.Black.ToFile</span>
+									</span>
+								}
+								else {
+									<span class="history__piece history__piece--empty"></span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+</section>
+
+@code {
+	/// <summary>
+	/// The moves to display, grouped into rows of one white and one black move.
+	/// </summary>
+	private List<HistoryEntry> Entries { get; set; } = new();
+
+	protected override void OnInitialized()
+	{
+		Feed.OnMove += OnMove;
+
+		Rebuild();
+	}
+
+	private void OnMove()
+	{
+		InvokeAsync(() => {
+			Rebuild();
+			StateHasChanged();
+		});
+	}
+
+	public void Dispose() => Feed.OnMove -= OnMove;
+
+	/// <summary>
+	/// Rebuilds the display list from the observed moves.
+	/// </summary>
+	/// <remarks>
+	/// The domain's own history is not used as the source of truth because it
+	/// records only destination squares and drops the first white move. The
+	/// frontend observes the moves directly, so every move is available here.
+	/// White plays first, so a white move opens a row and the black move fills
+	/// it; the reverse order would leave the leading cell of the first row
+	/// empty until Black replied.
+	/// </remarks>
+	private void Rebuild()
+	{
+		var entries = new List<HistoryEntry>();
+		var current = new HistoryEntry();
+
+		foreach (var move in Feed.Moves)
+		{
+			var container = new PieceSingleMoveContainer
+			{
+				Name = move.Piece?.Name ?? string.Empty,
+				ToRank = move.ToRank,
+				ToFile = move.ToFile
+			};
+
+			if (move.Piece?.Color == Color.White) {
+				if (current.White is not null || current.Black is not null)
+					entries.Add(current);
+
+				current = new HistoryEntry
+				{
+					White = container,
+					MoveNumber = entries.Count + 1
+				};
+			}
+			else {
+				current.Black = container;
+				current.MoveNumber = entries.Count + 1;
+			}
+		}
+
+		if (current.White is not null || current.Black is not null)
+			entries.Add(current);
+
+		Entries = entries;
+	}
+
+	/// <summary>
+	/// A single row of the move list.
+	/// </summary>
+	private sealed class HistoryEntry
+	{
+		public PieceSingleMoveContainer? Black { get; set; }
+
+		public PieceSingleMoveContainer? White { get; set; }
+
+		public int MoveNumber { get; set; }
+	}
+}

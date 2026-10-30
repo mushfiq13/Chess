@@ -1,4 +1,14 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-@Body
+<div class="app-shell">
+	<header class="app-shell__header">
+		<div class="app-shell__brand">
+			<span class="app-shell__mark" aria-hidden="true">♞</span>
+			<span class="app-shell__title">Chess</span>
+		</div>
+	</header>
 
+	<div class="app-shell__body">
+		@Body
+	</div>
+</div>

@@ -1,0 +1,88 @@
+@implements IDisposable
+@inject IGameHandler GameRunner
+@inject MoveFeed Feed
+
+<section class="captured">
+	<div class="captured__header">
+		<h2 class="panel__title">Captured</h2>
+		@if (Advantage is not 0) {
+			<span class="captured__advantage">@AdvantageLabel</span>
+		}
+	</div>
+
+	@if (CapturedByWhite.Count == 0 && CapturedByBlack.Count == 0) {
+		<p class="captured__empty">No pieces captured yet.</p>
+	}
+	else {
+		@if (CapturedByWhite.Count > 0) {
+			<div class="captured__row">
+				<span class="captured__label" aria-label="Pieces captured by white">White took</span>
+				<div class="captured__pieces">
+					@foreach (var piece in CapturedByWhite) {
+						<img class="captured__piece" src="img/@(piece.Name).png" alt="@(piece.Name)" />
+					}
+				</div>
+			</div>
+		}
+		@if (CapturedByBlack.Count > 0) {
+			<div class="captured__row">
+				<span class="captured__label" aria-label="Pieces captured by black">Black took</span>
+				<div class="captured__pieces">
+					@foreach (var piece in CapturedByBlack) {
+						<img class="captured__piece" src="img/@(piece.Name).png" alt="@(piece.Name)" />
+					}
+				</div>
+			</div>
+		}
+	}
+</section>
+
+@code {
+	protected override void OnInitialized() => Feed.OnMove += OnMove;
+
+	private void OnMove() => InvokeAsync(StateHasChanged);
+
+	public void Dispose() => Feed.OnMove -= OnMove;
+
+	/// <summary>
+	/// Pieces that white has captured.
+	/// </summary>
+	private List<IPiece> CapturedByWhite => GameRunner.Captured
+		.Where(p => p.Color == Color.Black)
+		.ToList();
+
+	/// <summary>
+	/// Pieces that black has captured.
+	/// </summary>
+	private List<IPiece> CapturedByBlack => GameRunner.Captured
+		.Where(p => p.Color == Color.White)
+		.ToList();
+
+	/// <summary>
+	/// The material advantage, from white's point of view.
+	/// </summary>
+	private int Advantage
+	{
+		get {
+			var white = CapturedByWhite.Sum(p => MaterialValue(p));
+			var black = CapturedByBlack.Sum(p => MaterialValue(p));
+
+			return white - black;
+		}
+	}
+
+	private string AdvantageLabel
+		=> Advantage > 0 ? $"+{Advantage} white" : $"{Advantage} black";
+
+	/// <summary>
+	/// Standard chess material values.
+	/// </summary>
+	private static int MaterialValue(IPiece piece) => BoardCoordinate.KindOf(piece) switch {
+		"pawn" => 1,
+		"knight" => 3,
+		"bishop" => 3,
+		"rook" => 5,
+		"queen" => 9,
+		_ => 0
+	};
+}

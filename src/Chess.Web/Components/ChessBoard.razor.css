@@ -1,0 +1,159 @@
+.board-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-3);
+	width: 100%;
+}
+
+.board-frame {
+	position: relative;
+	padding: var(--space-3);
+	border-radius: var(--radius-lg);
+	background:
+		linear-gradient(145deg, rgba(255, 255, 255, .07), rgba(0, 0, 0, .28)),
+		var(--surface-2);
+	border: 1px solid var(--border);
+	box-shadow:
+		0 24px 48px -24px rgba(0, 0, 0, .8),
+		inset 0 1px 0 rgba(255, 255, 255, .06);
+	max-width: 100%;
+}
+
+/* The board is a perfect square that scales continuously with the viewport. */
+.board {
+	--board-size: min(86vmin, 32rem);
+
+	display: grid;
+	grid-template-columns: repeat(8, 1fr);
+	grid-template-rows: repeat(8, 1fr);
+	width: var(--board-size);
+	max-width: 100%;
+	aspect-ratio: 1 / 1;
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, .55);
+}
+
+.board-row {
+	display: contents;
+}
+
+.square {
+	position: relative;
+	display: grid;
+	place-items: center;
+	background-size: cover;
+	background-position: center;
+	border: 0;
+	padding: 0;
+	cursor: default;
+	outline: none;
+	/* Keeps the square perfectly square even with fractional grid tracks. */
+	min-width: 0;
+	min-height: 0;
+}
+
+.square--light {
+	background-image: url(/img/lightwood.png);
+}
+
+.square--dark {
+	background-image: url(/img/darkwood.png);
+}
+
+/* Selected source square uses the green tint textures. */
+.square--selected {
+	background-size: cover;
+}
+
+.square--light.square--selected {
+	background-image: url(/img/lightwood-highlight.png);
+}
+
+.square--dark.square--selected {
+	background-image: url(/img/darkwood-highlight.png);
+}
+
+/* The previous move is outlined rather than tinted, so the selection tint
+   stays readable. */
+.square--lastmove::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	box-shadow: inset 0 0 0 3px rgba(255, 214, 102, .55);
+	pointer-events: none;
+}
+
+/* Legal destination: a soft dot in the centre of the square. */
+.piece {
+	width: 84%;
+	height: 84%;
+	object-fit: contain;
+	pointer-events: none;
+	filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45));
+	transition: transform .12s ease-out;
+}
+
+.square:hover .piece {
+	transform: scale(1.06);
+}
+
+/* Keyboard cursor and focus ring. */
+.square--cursor::after {
+	box-shadow: inset 0 0 0 3px rgba(127, 176, 105, .9);
+}
+
+.square:focus-visible {
+	box-shadow: inset 0 0 0 4px var(--accent);
+	border-radius: 2px;
+}
+
+.square:focus-visible .piece {
+	transform: scale(1.08);
+}
+
+.board-coordinates {
+	position: absolute;
+	inset: var(--space-3);
+	pointer-events: none;
+	font-size: clamp(.55rem, 1.6vmin, .72rem);
+	font-weight: 700;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+.coord {
+	position: absolute;
+	color: rgba(242, 237, 233, .55);
+	text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
+}
+
+.coord-rank {
+	top: 2px;
+	left: 3px;
+}
+
+.coord-file {
+	bottom: 1px;
+	right: 4px;
+}
+
+.board-hint {
+	min-height: 1.25rem;
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+	text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.piece {
+		transition: none;
+	}
+
+	.square:hover .piece,
+	.square:focus-visible .piece {
+		transform: none;
+	}
+}
