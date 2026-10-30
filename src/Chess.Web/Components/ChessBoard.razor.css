@@ -55,11 +55,11 @@
 }
 
 .square--light {
-	background-image: url(/img/lightwood.png);
+	background-image: url(img/lightwood.png);
 }
 
 .square--dark {
-	background-image: url(/img/darkwood.png);
+	background-image: url(img/darkwood.png);
 }
 
 /* Selected source square uses the green tint textures. */
@@ -68,11 +68,11 @@
 }
 
 .square--light.square--selected {
-	background-image: url(/img/lightwood-highlight.png);
+	background-image: url(img/lightwood-highlight.png);
 }
 
 .square--dark.square--selected {
-	background-image: url(/img/darkwood-highlight.png);
+	background-image: url(img/darkwood-highlight.png);
 }
 
 /* The previous move is outlined rather than tinted, so the selection tint
