@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.x"
 
@@ -56,7 +56,7 @@ jobs:
           dotnet publish src/Chess.Web -c Release -o published
 
       - name: Upload artifact for web
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v4
         with:
           path: published/wwwroot
 
@@ -74,4 +74,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
