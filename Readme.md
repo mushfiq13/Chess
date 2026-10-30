@@ -1,12 +1,16 @@
 # ChessGame **_[Live](https://mushfiq13.github.io/Chess/)_**
 
-Project's Goal: Thinking, Implementation, Showcase
+A 2-player Blazor WebAssembly chess game with winner detection.
 
-Features:
+**Stack:** .NET 8 · Blazor WebAssembly
 
-1. 2-player chess game
-2. Winner detection
+## Run locally
 
-TODO:
+```bash
+dotnet restore
+dotnet run --project src/Chess.Web
+```
 
-1. Automate the opponent's action
+## TODO
+
+- Automate the opponent's action
